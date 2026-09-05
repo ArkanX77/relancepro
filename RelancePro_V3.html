@@ -11,9 +11,9 @@
 <div class="app"><aside class="side"><div class="brand">Relance<span>Pro</span></div><div class="nav"><button class="active" data-page="dashboard">Tableau de bord</button><button data-page="clients">Clients</button><button data-page="devis">Devis</button><button data-page="relances">Relances</button></div></aside>
 <main class="main">
 <div id="errorBox" class="error" style="display:none"></div>
-<section id="dashboard" class="page active"><div class="top"><div class="title"><h1 id="hello">Bonjour 👋</h1><p>Voici ce qui mérite votre attention.</p></div><button class="btn" id="newQuote">+ Nouveau devis</button></div><div class="cards"><div class="card"><div class="label">À relancer aujourd'hui</div><div class="value danger" id="countDue">0</div></div><div class="card"><div class="label">Devis en attente</div><div class="value warn" id="countPending">0</div></div><div class="card"><div class="label">Devis acceptés</div><div class="value success" id="countAccepted">0</div></div><div class="card"><div class="label">Montant en attente</div><div class="value" id="amountPending">0 €</div></div></div><div class="section"><h2>🔴 À relancer aujourd'hui</h2><div id="dueList"></div></div></section>
-<section id="clients" class="page"><div class="top"><div class="title"><h1>Clients</h1><p>Vos clients enregistrés dans Grist.</p></div><button class="btn" id="newClient">+ Nouveau client</button></div><div class="section"><table><thead><tr><th>Nom</th><th>Entreprise</th><th>Email</th><th>Téléphone</th></tr></thead><tbody id="clientsBody"></tbody></table></div></section>
-<section id="devis" class="page"><div class="top"><div class="title"><h1>Devis</h1><p>Suivez vos devis et leurs prochaines relances.</p></div><button class="btn" id="newQuote2">+ Nouveau devis</button></div><div class="section"><table><thead><tr><th>Référence</th><th>Client</th><th>Objet</th><th>Montant</th><th>Statut</th><th>Prochaine relance</th><th></th></tr></thead><tbody id="quotesBody"></tbody></table></div></section>
+<section id="dashboard" class="page active"><div class="top"><div class="title"><h1 id="hello">Bonjour 👋</h1><p>Ne laissez aucun devis sans relance.</p></div><button class="btn" id="newQuote">+ Nouveau devis</button></div><div class="cards"><div class="card"><div class="label">À relancer aujourd'hui</div><div class="value danger" id="countDue">0</div></div><div class="card"><div class="label">Devis en attente</div><div class="value warn" id="countPending">0</div></div><div class="card"><div class="label">Devis acceptés</div><div class="value success" id="countAccepted">0</div></div><div class="card"><div class="label">Montant en attente</div><div class="value" id="amountPending">0 €</div></div></div><div class="section"><h2>🔴 À relancer aujourd'hui</h2><div id="dueList"></div></div></section>
+<section id="clients" class="page"><div class="top"><div class="title"><h1>Clients</h1><p>Clients suivis dans RelancePro.</p></div><button class="btn" id="newClient">+ Nouveau client</button></div><div class="section"><table><thead><tr><th>Nom</th><th>Entreprise</th><th>Email</th><th>Téléphone</th></tr></thead><tbody id="clientsBody"></tbody></table></div></section>
+<section id="devis" class="page"><div class="top"><div class="title"><h1>Devis</h1><p>Suivez les devis envoyés et leurs prochaines relances.</p></div><button class="btn" id="newQuote2">+ Nouveau devis</button></div><div class="section"><table><thead><tr><th>Référence</th><th>Client</th><th>Objet</th><th>Montant</th><th>Statut</th><th>Prochaine relance</th><th></th></tr></thead><tbody id="quotesBody"></tbody></table></div></section>
 <section id="relances" class="page"><div class="top"><div class="title"><h1>Relances</h1><p>Historique des relances enregistrées.</p></div></div><div class="section"><table><thead><tr><th>Date</th><th>Devis</th><th>Type</th><th>Statut</th></tr></thead><tbody id="followupsBody"></tbody></table></div></section>
 </main></div>
 <div class="modal" id="modal"><div class="modalbox"><h2 id="modalTitle">Préparer la relance</h2><div id="modalContent"></div><div class="footer-actions"><button class="btn secondary" id="cancelModal">Annuler</button><button class="btn" id="saveModal">Enregistrer</button></div></div></div><div class="status" id="status"></div>
@@ -94,32 +94,28 @@ async function refresh(){
     showError('Lecture Grist impossible : '+e.message);
   }
 }
-async function addRecord(
-  table,
-  fields
-){
-
+async function addRecord(table,fields){
   await grist.docApi.applyUserActions([
-    [
-      'AddRecord',
-      table,
-      null,
-      fields
-    ]
+    ['AddRecord',table,null,fields]
   ]);
-
   await refresh();
-
 }
- 
 async function updateRecord(table,rowId,fields){await grist.docApi.applyUserActions([['UpdateRecord',table,rowId,fields]]);await refresh()}
 function openModal(title,html,mode='message'){modalMode=mode;$('modalTitle').textContent=title;$('modalContent').innerHTML=html;$('modal').classList.add('open')}
 function closeModal(){$('modal').classList.remove('open');pendingQuote=null}
-function openRelance(id){const q=findById('Devis',id);if(!q)return;pendingQuote=q;const c=clientForQuote(q)||{};const first=(c.nom||'').split(' ')[0];const msg=`Bonjour ${first},\n\nJe me permets de revenir vers vous concernant le devis ${quoteLabel(q)} pour ${q.objet||'les travaux'}.\n\nAvez-vous eu le temps d’en prendre connaissance ? Je reste à votre disposition si vous avez des questions ou souhaitez que nous échangions à ce sujet.\n\nBien cordialement,\n${currentUser?.prenom||''} ${currentUser?.nom||''}`;openModal('Préparer la relance',`<label>Message à copier</label><textarea class="message" id="messageBox">${esc(msg)}</textarea><div class="sub" style="margin-top:8px">L’enregistrement créera une ligne dans Relances et passera le devis à « À relancer ».</div>`,'relance')}
+function openRelance(id){const q=findById('Devis',id);if(!q)return;pendingQuote=q;const c=clientForQuote(q)||{};const first=(c.nom||'').split(' ')[0];const msg=`Bonjour ${first},\n\nJe me permets de revenir vers vous concernant le devis ${quoteLabel(q)} pour ${q.objet||'les travaux'}.\n\nAvez-vous eu le temps d’en prendre connaissance ? Je reste à votre disposition si vous avez des questions ou souhaitez que nous échangions à ce sujet.\n\nBien cordialement,\n${currentUser?.prenom||''} ${currentUser?.nom||''}`;openModal('Préparer la relance',`<label>Message à copier</label><textarea class="message" id="messageBox">${esc(msg)}</textarea><div class="sub" style="margin-top:8px">Copiez le message dans votre messagerie, puis cliquez sur « Enregistrer » pour conserver la relance dans l’historique.</div>`,'relance')}
 function openNewClient(){openModal('Nouveau client',`<div class="form"><div><label>Nom</label><input id="cNom" placeholder="Paul Dupont"></div><div><label>Entreprise</label><input id="cEntreprise" placeholder="Dupont & Fils"></div><div><label>Email</label><input id="cEmail" type="email" placeholder="paul@example.com"></div><div><label>Téléphone</label><input id="cTel" type="tel" placeholder="06 00 00 00 00"></div></div>`,'newClient')}
 function openNewQuote(){const options=data.Clients.map(c=>`<option value="${c.id}">${esc(c.nom||('Client #'+c.id))}</option>`).join('');openModal('Nouveau devis',`<div class="form"><div><label>Client</label><select id="fClient">${options}</select></div><div><label>Référence</label><input id="fRef" placeholder="DEV-2026-003"></div><div><label>Objet</label><input id="fObjet" placeholder="Travaux / prestation"></div><div><label>Montant (€)</label><input id="fMontant" type="number" min="0" step="0.01"></div><div><label>Date d’envoi</label><input id="fDate" type="date" value="${isoToday()}"></div><div><label>Prochaine relance</label><input id="fNext" type="date" value="${isoToday()}"></div></div>`,'newQuote')}
 $('cancelModal').onclick=closeModal;$('modal').onclick=e=>{if(e.target===$('modal'))closeModal()};$('newQuote').onclick=openNewQuote;$('newQuote2').onclick=openNewQuote;$('newClient').onclick=openNewClient;
-$('saveModal').onclick=async()=>{try{if(modalMode==='newClient'){const nom=$('cNom').value.trim();if(!nom){alert('Le nom du client est obligatoire.');return}await addRecord('Clients',{utilisateur:currentUser?.id||null,nom,entreprise:$('cEntreprise').value.trim(),email:$('cEmail').value.trim(),telephone:$('cTel').value.trim()});closeModal();showStatus('Client créé');return}if(modalMode==='relance'){const q=pendingQuote;await addRecord('Relances',{devis:q.id,date:new Date().toISOString(),type:'Manuelle',statut:'Préparée'});await updateRecord('Devis',q.id,{statut:'À relancer',prochaine_relance:isoToday()});closeModal();showStatus('Relance enregistrée');return}
+$('saveModal').onclick=async()=>{try{if(modalMode==='newClient'){const nom=$('cNom').value.trim();if(!nom){alert('Le nom du client est obligatoire.');return}await addRecord('Clients',{utilisateur:currentUser?.id||null,nom,entreprise:$('cEntreprise').value.trim(),email:$('cEmail').value.trim(),telephone:$('cTel').value.trim()});closeModal();showStatus('Client créé');return}if(modalMode==='relance'){const q=pendingQuote;await addRecord('Relances',{devis:q.id,date:new Date().toISOString(),type:'Manuelle',statut:'Préparée'});const nextDate=new Date();
+nextDate.setDate(nextDate.getDate()+7);
+await updateRecord('Devis',q.id,{
+  statut:'À relancer',
+  prochaine_relance:nextDate.toISOString().slice(0,10)
+});
+closeModal();
+showStatus('Relance enregistrée · prochaine relance dans 7 jours');
+return}
  if(modalMode==='newQuote'){const ref=$('fRef').value.trim(),obj=$('fObjet').value.trim(),mont=Number($('fMontant').value)||0,client=Number($('fClient').value),date=$('fDate').value,next=$('fNext').value;if(!ref||!obj||!client){alert('Client, référence et objet sont obligatoires.');return}await addRecord('Devis',{utilisateur:currentUser?.id||null,client,reference:ref,objet:obj,montant:mont,date_creation:new Date().toISOString(),date_envoi:date,statut:'Envoyé',prochaine_relance:next});closeModal();showStatus('Devis créé');}}
 catch(e){showError('Erreur : '+e.message);console.error(e)}};
 for(const b of document.querySelectorAll('.nav button'))b.onclick=()=>{document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$(b.dataset.page).classList.add('active')};
