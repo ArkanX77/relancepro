@@ -94,7 +94,24 @@ async function refresh(){
     showError('Lecture Grist impossible : '+e.message);
   }
 }
-async function addRecord(table,fields){await grist.docApi.applyUserActions([['AddRecord',table,fields]]);await refresh()}
+async function addRecord(
+  table,
+  fields
+){
+
+  await grist.docApi.applyUserActions([
+    [
+      'AddRecord',
+      table,
+      null,
+      fields
+    ]
+  ]);
+
+  await refresh();
+
+}
+ 
 async function updateRecord(table,rowId,fields){await grist.docApi.applyUserActions([['UpdateRecord',table,rowId,fields]]);await refresh()}
 function openModal(title,html,mode='message'){modalMode=mode;$('modalTitle').textContent=title;$('modalContent').innerHTML=html;$('modal').classList.add('open')}
 function closeModal(){$('modal').classList.remove('open');pendingQuote=null}
